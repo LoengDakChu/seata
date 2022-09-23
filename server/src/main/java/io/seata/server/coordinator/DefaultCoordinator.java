@@ -153,6 +153,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     @Override
     protected void doGlobalBegin(GlobalBeginRequest request, GlobalBeginResponse response, RpcContext rpcContext)
         throws TransactionException {
+        // core.begin 开启全局事务session，返回xid
         response.setXid(core.begin(rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(),
             request.getTransactionName(), request.getTimeout()));
         if (LOGGER.isInfoEnabled()) {
@@ -375,6 +376,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
      * Init.
      */
     public void init() {
+        // 重试回滚
         retryRollbacking.scheduleAtFixedRate(() -> {
             try {
                 handleRetryRollbacking();
@@ -383,6 +385,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             }
         }, 0, ROLLBACKING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        // 重试提交
         retryCommitting.scheduleAtFixedRate(() -> {
             try {
                 handleRetryCommitting();
@@ -391,6 +394,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             }
         }, 0, COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        // 异步提交
         asyncCommitting.scheduleAtFixedRate(() -> {
             try {
                 handleAsyncCommitting();
@@ -399,6 +403,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             }
         }, 0, ASYNC_COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        // 异步超时检查
         timeoutCheck.scheduleAtFixedRate(() -> {
             try {
                 timeoutCheck();
@@ -407,6 +412,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             }
         }, 0, TIMEOUT_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        // undoLog 删除
         undoLogDelete.scheduleAtFixedRate(() -> {
             try {
                 undoLogDelete();

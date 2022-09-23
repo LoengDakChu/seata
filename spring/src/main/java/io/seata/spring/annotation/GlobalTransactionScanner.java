@@ -166,12 +166,12 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
         if (StringUtils.isNullOrEmpty(applicationId) || StringUtils.isNullOrEmpty(txServiceGroup)) {
             throw new IllegalArgumentException(String.format("applicationId: %s, txServiceGroup: %s", applicationId, txServiceGroup));
         }
-        //init TM
+        // 初始化TM
         TMClient.init(applicationId, txServiceGroup);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Transaction Manager Client is initialized. applicationId[{}] txServiceGroup[{}]", applicationId, txServiceGroup);
         }
-        //init RM
+        // 初始化RM
         RMClient.init(applicationId, txServiceGroup);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Resource Manager is initialized. applicationId[{}] txServiceGroup[{}]", applicationId, txServiceGroup);
@@ -193,8 +193,18 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
         ShutdownHook.getInstance().addDisposable(RmNettyRemotingClient.getInstance(applicationId, txServiceGroup));
     }
 
+    /**
+     * GlobalTransactionScanner 继承AbstractAutoProxyCreator，实现SmartInstantiationAwareBeanPostProcessor后置处理器。
+     * 所以会调用初始化后方法，最后调用wrapIfNecessary方法，创建全局事务拦截器GlobalTransactionalInterceptor
+     *
+     * @param bean
+     * @param beanName
+     * @param cacheKey
+     * @return
+     */
     @Override
     protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+        // 如果是禁用全局事务，不执行
         if (disableGlobalTransaction) {
             return bean;
         }
@@ -205,13 +215,16 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                 }
                 interceptor = null;
                 //check TCC proxy
+                // 优先创建TCC代理
                 if (TCCBeanParserUtils.isTccAutoProxy(bean, beanName, applicationContext)) {
                     //TCC interceptor, proxy bean of sofa:reference/dubbo:reference, and LocalTCC
+                    // 创建TCC拦截器
                     interceptor = new TccActionInterceptor(TCCBeanParserUtils.getRemotingDesc(beanName));
                 } else {
                     Class<?> serviceInterface = SpringProxyUtils.findTargetClass(bean);
                     Class<?>[] interfacesIfJdk = SpringProxyUtils.findInterfaces(bean);
 
+                    // 不存在@GlobalTransactional注解，就直接返回了
                     if (!existsAnnotation(new Class[]{serviceInterface})
                         && !existsAnnotation(interfacesIfJdk)) {
                         return bean;
@@ -219,6 +232,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
 
                     if (interceptor == null) {
                         if (globalTransactionalInterceptor == null) {
+                            // 创建全局事务拦截器
                             globalTransactionalInterceptor = new GlobalTransactionalInterceptor(failureHandlerHook);
                             ConfigurationCache.addConfigListener(
                                 ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
@@ -291,6 +305,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
             }
             return;
         }
+        // 初始化Client
         initClient();
     }
 

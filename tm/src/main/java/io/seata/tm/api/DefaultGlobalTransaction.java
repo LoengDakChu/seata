@@ -90,6 +90,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     @Override
     public void begin(int timeout, String name) throws TransactionException {
+        // 只有是发起者的时候才能执行开始方法
         if (role != GlobalTransactionRole.Launcher) {
             assertXIDNotNull();
             if (LOGGER.isDebugEnabled()) {
@@ -101,8 +102,10 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         if (RootContext.getXID() != null) {
             throw new IllegalStateException();
         }
+        // TM向TC发起开启全局事务请求，获取全局事务id
         xid = transactionManager.begin(null, null, name, timeout);
         status = GlobalStatus.Begin;
+        //绑定全局事务id
         RootContext.bind(xid);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Begin new global transaction [{}]", xid);

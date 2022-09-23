@@ -76,6 +76,7 @@ public class Server {
 
         System.setProperty(ConfigurationKeys.STORE_MODE, parameterParser.getStoreMode());
 
+        // 创建NettyRemotingServer
         NettyRemotingServer nettyRemotingServer = new NettyRemotingServer(WORKING_THREADS);
         //server port
         nettyRemotingServer.setListenPort(parameterParser.getPort());
@@ -83,6 +84,7 @@ public class Server {
         //log store mode : file, db, redis
         SessionHolder.init(parameterParser.getStoreMode());
 
+        // 创建TC 事务协调器，绑定netty信息
         DefaultCoordinator coordinator = new DefaultCoordinator(nettyRemotingServer);
         coordinator.init();
         nettyRemotingServer.setHandler(coordinator);

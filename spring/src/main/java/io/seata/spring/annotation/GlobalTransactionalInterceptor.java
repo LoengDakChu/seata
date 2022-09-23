@@ -119,6 +119,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
             boolean localDisable = disable || (degradeCheck && degradeNum >= degradeCheckAllowTimes);
             if (!localDisable) {
                 if (globalTransactionalAnnotation != null) {
+                    // 处理全局事务
                     return handleGlobalTransaction(methodInvocation, globalTransactionalAnnotation);
                 } else if (globalLockAnnotation != null) {
                     return handleGlobalLock(methodInvocation);
@@ -144,6 +145,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         final GlobalTransactional globalTrxAnno) throws Throwable {
         boolean succeed = true;
         try {
+            //核心方法
             return transactionalTemplate.execute(new TransactionalExecutor() {
                 @Override
                 public Object execute() throws Throwable {
@@ -158,12 +160,14 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
                     return formatMethod(methodInvocation.getMethod());
                 }
 
+                //获取事务信息
                 @Override
                 public TransactionInfo getTransactionInfo() {
                     TransactionInfo transactionInfo = new TransactionInfo();
                     transactionInfo.setTimeOut(globalTrxAnno.timeoutMills());
                     transactionInfo.setName(name());
                     transactionInfo.setPropagation(globalTrxAnno.propagation());
+                    // 添加回滚规则
                     Set<RollbackRule> rollbackRules = new LinkedHashSet<>();
                     for (Class<?> rbRule : globalTrxAnno.rollbackFor()) {
                         rollbackRules.add(new RollbackRule(rbRule));

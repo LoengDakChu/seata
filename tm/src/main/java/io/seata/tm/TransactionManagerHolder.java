@@ -36,6 +36,7 @@ public class TransactionManagerHolder {
 
         static {
             try {
+                // JAVA SPI 加载 io.seata.core.model.TransactionManager = DefaultTransactionManager
                 INSTANCE = EnhancedServiceLoader.load(TransactionManager.class);
                 LOGGER.info("TransactionManager Singleton {}", INSTANCE);
             } catch (Throwable anyEx) {

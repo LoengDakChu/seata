@@ -50,10 +50,12 @@ public class DefaultTransactionManager implements TransactionManager {
         GlobalBeginRequest request = new GlobalBeginRequest();
         request.setTransactionName(name);
         request.setTimeout(timeout);
+        // 同步调用seata服务端，TmNettyRemotingClient的rpc调用
         GlobalBeginResponse response = (GlobalBeginResponse) syncCall(request);
         if (response.getResultCode() == ResultCode.Failed) {
             throw new TmTransactionException(TransactionExceptionCode.BeginFailed, response.getMsg());
         }
+        //返回全局事务id
         return response.getXid();
     }
 

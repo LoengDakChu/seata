@@ -30,6 +30,10 @@ public class ContextCoreLoader {
 
     }
 
+    /**
+     * 内部类懒加载单例
+     * 只有用到内部类的时候才会加载（减少没必要的空间开销）、类加载属于线程安全
+     */
     private static class ContextCoreHolder {
         private static final ContextCore INSTANCE = Optional.ofNullable(EnhancedServiceLoader.load(ContextCore.class)).orElse(new ThreadLocalContextCore());
     }

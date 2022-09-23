@@ -48,32 +48,39 @@ public class TransactionalTemplate {
      * @throws TransactionalExecutor.ExecutionException the execution exception
      */
     public Object execute(TransactionalExecutor business) throws Throwable {
-        // 1 get transactionInfo
+        // 1. 获取事务信息
         TransactionInfo txInfo = business.getTransactionInfo();
         if (txInfo == null) {
             throw new ShouldNeverHappenException("transactionInfo does not exist");
         }
-        // 1.1 get or create a transaction
+        // 1.1 获取当前事务，如果不是空，则是GlobalTransactionRole.Participant的角色；如果是空，新建全局事务
         GlobalTransaction tx = GlobalTransactionContext.getCurrentOrCreate();
 
-        // 1.2 Handle the Transaction propatation and the branchType
+        // 1.2 处理事务的隔离级别
         Propagation propagation = txInfo.getPropagation();
         SuspendedResourcesHolder suspendedResourcesHolder = null;
         try {
             switch (propagation) {
+                // 不支持当前事务
                 case NOT_SUPPORTED:
+                    // 暂停事务，解除xid，执行目标方法
                     suspendedResourcesHolder = tx.suspend(true);
                     return business.execute();
+                // 新开启一个新事务
                 case REQUIRES_NEW:
+                    // 暂停事务，解除xid
                     suspendedResourcesHolder = tx.suspend(true);
                     break;
+                // 支持当前事务，如果当前没事务就以非事务执行
                 case SUPPORTS:
                     if (!existingTransaction()) {
                         return business.execute();
                     }
                     break;
+                // 支持当前事务，如果当前没事故就开启一个新事务
                 case REQUIRED:
                     break;
+                // 要求当前没有事务，如果有则抛异常
                 case NEVER:
                     if (existingTransaction()) {
                         throw new TransactionException(
@@ -82,6 +89,7 @@ public class TransactionalTemplate {
                     } else {
                         return business.execute();
                     }
+                // 要求当前必须有事务，没有则抛异常
                 case MANDATORY:
                     if (!existingTransaction()) {
                         throw new TransactionException("No existing transaction found for transaction marked with propagation 'mandatory'");
@@ -94,7 +102,7 @@ public class TransactionalTemplate {
 
             try {
 
-                // 2. begin transaction
+                // 2. 开启事务
                 beginTransaction(txInfo, tx);
 
                 Object rs = null;
@@ -171,8 +179,11 @@ public class TransactionalTemplate {
 
     private void beginTransaction(TransactionInfo txInfo, GlobalTransaction tx) throws TransactionalExecutor.ExecutionException {
         try {
+            // 执行钩子函数
             triggerBeforeBegin();
+            // 开启事务
             tx.begin(txInfo.getTimeOut(), txInfo.getName());
+            // 执行钩子函数
             triggerAfterBegin();
         } catch (TransactionException txe) {
             throw new TransactionalExecutor.ExecutionException(tx, txe,
